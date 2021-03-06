@@ -34,30 +34,41 @@ func getRootDir(relpath string) (string, error) {
 	return filepath.Join(dir, relpath), nil
 }
 
-func walkFunc(path string, changes []*Change) fs.WalkDirFunc {
+func walkFunc(changes []*Change) fs.WalkDirFunc {
 	return func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
+		fmt.Println(path)
 		return nil
 	}
 }
+
+func copyAndModify(filename string, changes []*Change) error {
+	bytes, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+
+	s := string(bytes)
+
+	for _, change := range changes {
+		old, new := change.Replace, change.With
+		s = strings.ReplaceAll(s, old, new)
+	}
+
+	err = ioutil.WriteFile(filename, []byte(s), 0644)
+	return err
+}
+
 func main() {
-	bytes, err := ioutil.ReadFile("./example/.makecopy.yml")
+	bytes, err := ioutil.ReadFile("./.makecopy.yml")
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	c := Config{}
 	if err := yaml.Unmarshal(bytes, &c); err != nil {
-		log.Fatal(err)
-	}
-
-	root, err := getRootDir(c.Path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := filepath.WalkDir(root, walkFunc(c.ch)); err != nil {
 		log.Fatal(err)
 	}
 
@@ -70,6 +81,7 @@ func main() {
 
 	// Ask for replacement tokens
 	// Or use default tokens
+	var changes []*Change
 	for question, change := range c.Changes {
 		if change.With == "" {
 			answer, err := prompt(question, change.Default)
@@ -81,6 +93,15 @@ func main() {
 		if change.With == "" {
 			change.With = change.Default
 		}
+		changes = append(changes, change)
+	}
+
+	root, err := getRootDir(c.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := filepath.WalkDir(root, walkFunc(changes)); err != nil {
+		log.Fatal(err)
 	}
 
 	// Modify files
@@ -102,25 +123,4 @@ func prompt(q string, suggest string) (string, error) {
 	fmt.Print(p)
 	result, err := reader.ReadString('\n')
 	return result, err
-}
-
-func copyDir(path string) error {
-	return nil
-}
-
-func modifyFile(filename string, changes []Change) error {
-	bytes, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-
-	s := string(bytes)
-
-	for _, change := range changes {
-		old, new := change.Replace, change.With
-		s = strings.ReplaceAll(s, old, new)
-	}
-
-	err = ioutil.WriteFile(filename, []byte(s), 0644)
-	return err
 }
