@@ -1,0 +1,11 @@
+message: "Copying example-app"
+path: "./example/example-app"
+changes:
+  "Project prefix":
+    replace: "example"
+    default: "myexample"
+  "App name":
+    replace: "app"
+    default: "myapp"
+
+modifyfilenames: true
