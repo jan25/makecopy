@@ -6,5 +6,10 @@ This project is a WIP.
 
 ## Install and Usage
 
+## Develop
+
+Use `make run` and `make build` to quickly test changes.
+
 ## License
 
+MIT
