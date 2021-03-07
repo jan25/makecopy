@@ -26,7 +26,67 @@ type Config struct {
 	ModifyFilenames bool               `yaml:"modifyfilenames"`
 }
 
-func getRootDir(relpath string) (string, error) {
+type FileOp interface {
+	Operate(path string, isDir bool) error
+}
+
+type Copier struct {
+	Source string
+	Dest   string
+}
+
+func (c *Copier) Operate(path string, isDir bool) error {
+	rel, err := filepath.Rel(c.Source, path)
+	if err != nil {
+		return err
+	}
+
+	destpath := filepath.Join(c.Dest, rel)
+
+	if isDir {
+		return os.Mkdir(destpath, 0755)
+	}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(destpath, data, 0655)
+}
+
+type Changer struct {
+	Changes []*Change
+}
+
+func (c *Changer) Operate(path string, isDir bool) error {
+	if isDir {
+		return nil
+	}
+
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	s := string(bytes)
+
+	for _, change := range c.Changes {
+		old, new := change.Replace, change.With
+		s = strings.ReplaceAll(s, old, new)
+	}
+	return ioutil.WriteFile(path, []byte(s), 0644)
+}
+
+func walkFunc(op FileOp) fs.WalkDirFunc {
+	return func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		return op.Operate(path, d.IsDir())
+	}
+}
+
+func getSourceDir(relpath string) (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -34,31 +94,14 @@ func getRootDir(relpath string) (string, error) {
 	return filepath.Join(dir, relpath), nil
 }
 
-func walkFunc(changes []*Change) fs.WalkDirFunc {
-	return func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-		fmt.Println(path)
-		return nil
-	}
-}
-
-func copyAndModify(filename string, changes []*Change) error {
-	bytes, err := ioutil.ReadFile(filename)
+func getDestDir(relpath string) (string, error) {
+	d, err := os.Getwd()
 	if err != nil {
-		return err
+		return "", err
 	}
-
-	s := string(bytes)
-
-	for _, change := range changes {
-		old, new := change.Replace, change.With
-		s = strings.ReplaceAll(s, old, new)
-	}
-
-	err = ioutil.WriteFile(filename, []byte(s), 0644)
-	return err
+	olddir := filepath.Dir(d)
+	newdir := fmt.Sprintf("%s-%s", olddir, randomName())
+	return filepath.Join(d, newdir), nil
 }
 
 func main() {
@@ -72,16 +115,36 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// validate config even if not errors
+	// Validate config
 
+	// Say that we're copying files
 	fmt.Println(c.Message)
 
-	// Make copy of target directory or target file
-	// Clean copy if process was interupped
+	// Copy files from source directory
+	from, err := getSourceDir(c.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	to, err := getDestDir(c.Path)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// Ask for replacement tokens
-	// Or use default tokens
-	var changes []*Change
+	copier := Copier{
+		Source: from,
+		Dest:   to,
+	}
+	copierFunc := walkFunc(&copier)
+	if err := filepath.WalkDir(from, copierFunc); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Cloning done")
+
+	// Change copied over files
+	fmt.Println("Changing copied files")
+	changer := Changer{}
+
 	for question, change := range c.Changes {
 		if change.With == "" {
 			answer, err := prompt(question, change.Default)
@@ -93,22 +156,18 @@ func main() {
 		if change.With == "" {
 			change.With = change.Default
 		}
-		changes = append(changes, change)
+		changer.Changes = append(changer.Changes, change)
 	}
 
-	root, err := getRootDir(c.Path)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := filepath.WalkDir(root, walkFunc(changes)); err != nil {
+	changerFunc := walkFunc(&changer)
+	if err := filepath.WalkDir(from, changerFunc); err != nil {
 		log.Fatal(err)
 	}
 
-	// Modify files
-	// Simple idea: Walk over files under a directory
-	// Find and replace for one file at a time
+	fmt.Println("Changing done")
 
 	// Print new copy directory name
+	fmt.Printf("Success making copy of %s at %s \n", c.Path, filepath.Dir(to))
 }
 
 func prompt(q string, suggest string) (string, error) {
