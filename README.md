@@ -1,4 +1,4 @@
-# Makecopy
+# Makecopy [![build](https://github.com/jan25/makecopy/actions/workflows/go.yml/badge.svg)](https://github.com/jan25/makecopy/actions/workflows/go.yml)
 
 Make copy of code and modify parts of it without human errors with copy pasting.
 
