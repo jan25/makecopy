@@ -16,3 +16,5 @@ Setup goreleaser to build binaries
 Write tests and setup CI
 
 Setup bazel wrapper so to use via bazel run
+
+Add debug logging support

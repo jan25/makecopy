@@ -1,2 +1,6 @@
 .vscode
 .pytest_cache
+
+example-*
+
+makecopy

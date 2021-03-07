@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -24,57 +22,6 @@ type Config struct {
 	Path            string             `yaml:"path"`
 	Changes         map[string]*Change `yaml:"changes"`
 	ModifyFilenames bool               `yaml:"modifyfilenames"`
-}
-
-type FileOp interface {
-	Operate(path string, isDir bool) error
-}
-
-type Copier struct {
-	Source string
-	Dest   string
-}
-
-func (c *Copier) Operate(path string, isDir bool) error {
-	rel, err := filepath.Rel(c.Source, path)
-	if err != nil {
-		return err
-	}
-
-	destpath := filepath.Join(c.Dest, rel)
-
-	if isDir {
-		return os.Mkdir(destpath, 0755)
-	}
-
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(destpath, data, 0655)
-}
-
-type Changer struct {
-	Changes []*Change
-}
-
-func (c *Changer) Operate(path string, isDir bool) error {
-	if isDir {
-		return nil
-	}
-
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	s := string(bytes)
-
-	for _, change := range c.Changes {
-		old, new := change.Replace, change.With
-		s = strings.ReplaceAll(s, old, new)
-	}
-	return ioutil.WriteFile(path, []byte(s), 0644)
 }
 
 func walkFunc(op FileOp) fs.WalkDirFunc {
@@ -99,7 +46,7 @@ func getDestDir(relpath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	olddir := filepath.Dir(d)
+	olddir := filepath.Base(relpath)
 	newdir := fmt.Sprintf("%s-%s", olddir, randomName())
 	return filepath.Join(d, newdir), nil
 }
@@ -115,7 +62,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Validate config
+	// TODO(jan25): Validate config
 
 	// Say that we're copying files
 	fmt.Println(c.Message)
@@ -130,6 +77,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	os.Mkdir(to, 0755)
 	copier := Copier{
 		Source: from,
 		Dest:   to,
@@ -141,7 +89,7 @@ func main() {
 
 	fmt.Println("Cloning done")
 
-	// Change copied over files
+	// Change copied files
 	fmt.Println("Changing copied files")
 	changer := Changer{}
 
@@ -167,19 +115,5 @@ func main() {
 	fmt.Println("Changing done")
 
 	// Print new copy directory name
-	fmt.Printf("Success making copy of %s at %s \n", c.Path, filepath.Dir(to))
-}
-
-func prompt(q string, suggest string) (string, error) {
-	p := ""
-	if suggest != "" {
-		p = fmt.Sprintf("%s (%s): ", q, suggest)
-	} else {
-		p = fmt.Sprintf("%s: ", q)
-	}
-
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print(p)
-	result, err := reader.ReadString('\n')
-	return result, err
+	fmt.Printf("Success making copy of %s at %s \n", c.Path, filepath.Base(to))
 }
