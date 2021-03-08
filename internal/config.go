@@ -23,8 +23,8 @@ type Config struct {
 }
 
 // GetConfig reads configuration file.
-func GetConfig() (*Config, error) {
-	bytes, err := ioutil.ReadFile("./.makecopy.yml")
+func GetConfig(path string) (*Config, error) {
+	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

@@ -10,15 +10,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var configFile *string
+
 var rootCmd = &cobra.Command{
 	Use:     "makecopy",
 	Aliases: []string{"mc"},
-	Short:   "Make a copy of code",
+	Short:   "Make a copy of code.",
 	Long: `Make copy of example code and replace pieces of it
 as you prefer with predefined configuration.`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		config, err := internal.GetConfig()
+		config, err := internal.GetConfig(*configFile)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -78,8 +80,10 @@ as you prefer with predefined configuration.`,
 	},
 }
 
-// Execute executes root command.
+// Execute runs root command.
 func Execute() {
+	configFile = rootCmd.Flags().StringP("config", "c", "./.makecopy.yml", "--config=config-file-path")
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
