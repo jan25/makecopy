@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"fmt"
@@ -21,8 +21,8 @@ type Copier struct {
 }
 
 // Operate copies files
-func (c *Copier) Operate(path string, isDir bool) error {
-	rel, err := filepath.Rel(c.Source, path)
+func (c *Copier) Operate(sourcePath string, isDir bool) error {
+	rel, err := filepath.Rel(c.Source, sourcePath)
 	if err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (c *Copier) Operate(path string, isDir bool) error {
 		return os.Mkdir(destpath, 0755)
 	}
 
-	data, err := ioutil.ReadFile(path)
+	data, err := ioutil.ReadFile(sourcePath)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,8 @@ func (c *Changer) Operate(path string, isDir bool) error {
 	return ioutil.WriteFile(path, []byte(s), 0644)
 }
 
-func walkFunc(op FileOp) fs.WalkDirFunc {
+// WalkFunc wraps fs.WalkDirFunc with a specific FileOp.
+func WalkFunc(op FileOp) fs.WalkDirFunc {
 	return func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
@@ -74,7 +75,8 @@ func walkFunc(op FileOp) fs.WalkDirFunc {
 	}
 }
 
-func getSourceDir(relpath string) (string, error) {
+// GetSourceDir computes absolute path to source directory.
+func GetSourceDir(relpath string) (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -82,7 +84,8 @@ func getSourceDir(relpath string) (string, error) {
 	return filepath.Join(dir, relpath), nil
 }
 
-func getDestDir(relpath string) (string, error) {
+// GetDestDir computes absolute path to destination directory.
+func GetDestDir(relpath string) (string, error) {
 	d, err := os.Getwd()
 	if err != nil {
 		return "", err

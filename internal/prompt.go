@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"bufio"
@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func prompt(q string, suggest string) (string, error) {
+// Prompt prompts a question to user.
+func Prompt(q string, suggest string) (string, error) {
 	p := ""
 	if suggest != "" {
 		p = fmt.Sprintf("%s (%s): ", q, suggest)

@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"io/ioutil"
@@ -22,10 +22,11 @@ type Config struct {
 	ModifyFilenames bool               `yaml:"modifyfilenames"`
 }
 
-func getConfig() *Config {
+// GetConfig reads configuration file.
+func GetConfig() (*Config, error) {
 	bytes, err := ioutil.ReadFile("./.makecopy.yml")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	c := Config{}
@@ -35,5 +36,5 @@ func getConfig() *Config {
 
 	// TODO(jan25): Validate config
 
-	return &c
+	return &c, nil
 }
