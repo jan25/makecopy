@@ -26,7 +26,11 @@ as you prefer with predefined configuration.`,
 		}
 
 		// Say that we're copying files
-		fmt.Println(config.Message)
+		if config.Message != "" {
+			fmt.Println(config.Message)
+		} else {
+			fmt.Printf("Copying %s\n", config.Path)
+		}
 
 		// Copy files from source directory
 		from, err := internal.GetSourceDir(config.Path)

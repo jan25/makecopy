@@ -2,7 +2,7 @@
 path: "./example/example-app"
 
 # Not supported yet: git url
-git: "github.com/jan25/makecopy"
+git: "github.com/path/to/repo"
 
 # Optional message to user
 # Default is "Copying {path}"
@@ -14,7 +14,7 @@ changes:
   "Project prefix":
     # Replace this token
     replace: "example"
-    # Replace with this token
+    # With optional default value
     default: "myexample"
 
   "App name":
